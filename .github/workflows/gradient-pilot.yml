@@ -31,6 +31,24 @@ jobs:
           START: ${{ inputs.start }}
           COUNT: ${{ inputs.count }}
         run: python generate.py --start "$START" --count "$COUNT" --out output
+      - name: Upload to Google Drive (only if configured)
+        if: ${{ env.RCLONE_CONFIG_B64 != '' }}
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+          DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${DRIVE_FOLDER_ID:-}" ]]; then
+            echo "DRIVE_FOLDER_ID repository variable is missing"
+            exit 1
+          fi
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          mkdir -p "$HOME/.config/rclone"
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$HOME/.config/rclone/rclone.conf"
+          chmod 600 "$HOME/.config/rclone/rclone.conf"
+          rclone copy output/ "gdrive:" --drive-root-folder-id "$DRIVE_FOLDER_ID" --checkers 4 --transfers 2 --retries 3
+          rm -f "$HOME/.config/rclone/rclone.conf"
       - uses: actions/upload-artifact@v4
         with:
           name: gradient-pilot-${{ inputs.start }}
