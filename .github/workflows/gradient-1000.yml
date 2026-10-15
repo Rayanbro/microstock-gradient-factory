@@ -1,0 +1,50 @@
+name: Gradient 1000 Production
+on:
+  push:
+    paths:
+      - '.github/workflows/gradient-1000.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  produce:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        batch: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+      - name: Generate 50 images
+        env:
+          BATCH: ${{ matrix.batch }}
+        run: |
+          python generate.py --start "$((BATCH * 50))" --count 50 --out output
+      - name: Upload to Google Drive if authorized
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+          DRIVE_FOLDER_ID: ${{ vars.DRIVE_FOLDER_ID }}
+          BATCH: ${{ matrix.batch }}
+        if: ${{ env.RCLONE_CONFIG_B64 != '' && env.DRIVE_FOLDER_ID != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          mkdir -p "$HOME/.config/rclone"
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$HOME/.config/rclone/rclone.conf"
+          chmod 600 "$HOME/.config/rclone/rclone.conf"
+          rclone copy output/ "gdrive:batch-$BATCH" --drive-root-folder-id "$DRIVE_FOLDER_ID" --transfers 2 --retries 3
+          rm -f "$HOME/.config/rclone/rclone.conf"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gradients-batch-${{ matrix.batch }}
+          path: output/
+          retention-days: 7
+          if-no-files-found: error
