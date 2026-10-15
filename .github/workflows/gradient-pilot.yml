@@ -1,0 +1,39 @@
+name: Gradient Pilot
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: 'Starting image index (0-9999)'
+        required: true
+        default: '0'
+      count:
+        description: 'Images in this run (1-50); use 2 for pilot'
+        required: true
+        default: '2'
+permissions:
+  contents: read
+concurrency:
+  group: gradient-pilot
+  cancel-in-progress: false
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+      - name: Render deterministic backgrounds
+        env:
+          START: ${{ inputs.start }}
+          COUNT: ${{ inputs.count }}
+        run: python generate.py --start "$START" --count "$COUNT" --out output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gradient-pilot-${{ inputs.start }}
+          path: output/
+          retention-days: 7
+          if-no-files-found: error
