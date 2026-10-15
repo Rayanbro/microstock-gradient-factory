@@ -1,8 +1,5 @@
 name: Gradient Pilot
 on:
-  push:
-    paths:
-      - '.github/workflows/gradient-pilot.yml'
   workflow_dispatch:
     inputs:
       start:
