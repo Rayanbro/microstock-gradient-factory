@@ -27,6 +27,7 @@ jobs:
           BATCH: ${{ matrix.batch }}
         run: |
           python generate.py --start "$((BATCH * 50))" --count 50 --out output
+          python quality_check.py --out output
       - name: Upload to Google Drive if authorized
         env:
           RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
