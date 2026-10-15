@@ -33,7 +33,9 @@ jobs:
         env:
           START: ${{ github.event_name == 'push' && '0' || inputs.start }}
           COUNT: ${{ github.event_name == 'push' && '50' || inputs.count }}
-        run: python generate.py --start "$START" --count "$COUNT" --out output
+        run: |
+          python generate.py --start "$START" --count "$COUNT" --out output
+          python quality_check.py --out output
       - name: Upload to Google Drive (only if configured)
         if: ${{ env.RCLONE_CONFIG_B64 != '' }}
         env:
