@@ -1,8 +1,5 @@
 name: Gradient 1000 Production
 on:
-  push:
-    paths:
-      - '.github/workflows/gradient-1000.yml'
   workflow_dispatch:
 permissions:
   contents: read
