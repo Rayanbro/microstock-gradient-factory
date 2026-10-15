@@ -1,5 +1,8 @@
 name: Gradient Pilot
 on:
+  push:
+    paths:
+      - '.github/workflows/gradient-pilot.yml'
   workflow_dispatch:
     inputs:
       start:
@@ -28,8 +31,8 @@ jobs:
       - run: python -m pytest -q
       - name: Render deterministic backgrounds
         env:
-          START: ${{ inputs.start }}
-          COUNT: ${{ inputs.count }}
+          START: ${{ github.event_name == 'push' && '0' || inputs.start }}
+          COUNT: ${{ github.event_name == 'push' && '50' || inputs.count }}
         run: python generate.py --start "$START" --count "$COUNT" --out output
       - name: Upload to Google Drive (only if configured)
         if: ${{ env.RCLONE_CONFIG_B64 != '' }}
@@ -51,7 +54,7 @@ jobs:
           rm -f "$HOME/.config/rclone/rclone.conf"
       - uses: actions/upload-artifact@v4
         with:
-          name: gradient-pilot-${{ inputs.start }}
+          name: gradient-production-${{ github.event_name == 'push' && '0' || inputs.start }}
           path: output/
           retention-days: 7
           if-no-files-found: error
