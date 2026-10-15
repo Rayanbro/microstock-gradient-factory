@@ -21,10 +21,13 @@ def render(i, dest, w=6000, h=4000):
         t=np.broadcast_to(np.clip(t,0,1),(n,w)); z=t*3; k=np.minimum(z.astype(np.int8),2)
         f=(z-k)[...,None]; f=f*f*(3-2*f)
         rgb=pal[k]*(1-f)+pal[k+1]*f
-        image.paste(Image.fromarray(np.uint8(np.clip(rgb+.5,0,255)),'RGB'),(0,top))
+        # Reproducible low-amplitude dither minimizes 8-bit quantization bands.
+        # This is traditional image processing, not generative AI.
+        dither=rng.uniform(-0.48,0.48,size=(n,w,1)).astype(np.float32)
+        image.paste(Image.fromarray(np.uint8(np.clip(rgb+dither+.5,0,255)),'RGB'),(0,top))
     dest=Path(dest);dest.parent.mkdir(parents=True,exist_ok=True)
     icc=ImageCms.ImageCmsProfile(ImageCms.createProfile('sRGB')).tobytes()
-    image.save(dest,'JPEG',quality=94,subsampling=0,icc_profile=icc,optimize=True)
+    image.save(dest,'JPEG',quality=97,subsampling=0,icc_profile=icc,optimize=True)
     return {'index':i,'filename':dest.name,'sha256':hashlib.sha256(dest.read_bytes()).hexdigest()}
 def main():
     p=argparse.ArgumentParser();p.add_argument('--start',type=int,default=0);p.add_argument('--count',type=int,default=2);p.add_argument('--width',type=int,default=6000);p.add_argument('--height',type=int,default=4000);p.add_argument('--out',default='output')
